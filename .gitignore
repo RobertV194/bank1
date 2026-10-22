@@ -1,0 +1,19 @@
+# Віртуальне середовище та кеші
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Бази даних
+*.db
+*.sqlite3
+instance/
+
+# Датасети та ML-артефакти
+data/*.csv
+ml_pipeline/artifacts/
+
+# IDE
+.idea/
+.vscode/

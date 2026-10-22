@@ -1,0 +1,689 @@
+{% set structures = ['Queue', 'PriorityQueue', 'Stack'] %}
+{% set operations = ['enqueue', 'dequeue', 'push', 'pop'] %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Банківське відділення</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="logo">🏦</span>
+        <b>Банківське відділення</b>
+      </div>
+      <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="menuWrap">
+        <span class="ico">☰</span>
+        <span class="mt-text"><small>Операції</small><b id="menuCurrent">Черги й стек</b></span>
+        <span class="chev">▾</span>
+      </button>
+      <div class="menu-wrap" id="menuWrap">
+        <nav class="menu">
+          <button class="tab" data-tab="queues"><span class="ico">🏦</span><span class="tx">Черги й стек</span></button>
+          <button class="tab" data-tab="algo"><span class="ico">🧮</span><span class="tx">Алгоритми</span></button>
+          <button class="tab" data-tab="ml"><span class="ico">🤖</span><span class="tx">ML-аналітика</span></button>
+          <button class="tab" data-tab="logs"><span class="ico">📜</span><span class="tx">Журнал</span></button>
+        </nav>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header>
+        <div>
+          <h1 id="pageTitle">Черги й стек</h1>
+          <p>FIFO-черга · LIFO-стек · алгоритми · журнал операцій у SQLite</p>
+        </div>
+        <div class="controls">
+          <label class="uid">ID користувача
+            <input id="userId" type="number" min="1" value="1">
+          </label>
+          <div class="live">
+            <label class="switch"><input id="liveToggle" type="checkbox" checked><i></i> Живе оновлення (3 с)</label>
+            <span class="status"><span id="statusDot" class="dot"></span> <span id="statusText">з’єднання…</span></span>
+          </div>
+        </div>
+      </header>
+
+  <main>
+    <!-- ===== Сторінка 1: черги й стек ===== -->
+    <div class="page" data-page="queues">
+      <section class="grid">
+        <!-- Єдина черга клієнтів: звичайні (FIFO) + VIP (Priority Queue) -->
+        <article class="card" id="cardQueue">
+          <h2>Черга клієнтів <span class="count" id="queueCount">0</span></h2>
+          <p class="hint">VIP-клієнти (Priority Queue) обслуговуються першими, решта — за порядком надходження (FIFO). <code>enqueue()</code> додає клієнта, <code>dequeue()</code> бере наступного.</p>
+          <div class="row">
+            <input id="queueInput" class="grow" data-enter="queue-enqueue" placeholder="Ім’я клієнта" maxlength="100" autocomplete="off">
+            <select id="queueType" aria-label="Тип пріоритету">
+              <option value="regular">Звичайний</option>
+              <option value="vip">VIP</option>
+            </select>
+          </div>
+          <div class="row">
+            <button class="primary" data-action="queue-enqueue">Додати</button>
+            <button class="success" data-action="queue-dequeue">Обслужити</button>
+          </div>
+          <div class="flow"><span>← наступний</span><span>останній →</span></div>
+          <ul class="list" id="queueList"></ul>
+        </article>
+
+        <article class="card" id="cardStack">
+          <h2>Стек транзакцій (LIFO) <span class="count" id="stackCount">0</span></h2>
+          <p class="hint">Остання операція обробляється першою. <code>push()</code> фіксує транзакцію й змінює баланс, <code>pop()</code> скасовує найновішу та повертає баланс (Undo).</p>
+          <div class="balance"><span>Баланс рахунку</span><b id="balanceValue">—</b></div>
+          <div class="row">
+            <input id="stackInput" class="wide" data-enter="stack-push" placeholder="Назва транзакції" maxlength="100" autocomplete="off">
+          </div>
+          <div class="row">
+            <select id="stackType" aria-label="Тип транзакції">
+              <option value="-1">Списання (−)</option>
+              <option value="1">Поповнення (+)</option>
+            </select>
+            <input id="stackAmount" class="small" type="number" min="0" step="0.01" placeholder="Сума" data-enter="stack-push" aria-label="Сума транзакції">
+          </div>
+          <div class="row">
+            <button class="primary" data-action="stack-push">Push</button>
+            <button class="danger" data-action="stack-pop">Pop (скасувати)</button>
+          </div>
+          <div class="flow"><span>↑ верх стеку</span><span>низ ↓</span></div>
+          <ul class="list" id="stackList"></ul>
+        </article>
+      </section>
+    </div>
+
+    <!-- ===== Сторінка 2: алгоритми ===== -->
+    <div class="page" data-page="algo" hidden>
+      <section class="card" id="cardAlgo">
+        <h2>Алгоритми сортування та пошуку</h2>
+        <p class="hint">Власні реалізації без <code>sorted()</code>. Введіть числа через пробіл або кому (дробові — з крапкою).</p>
+        <div class="row">
+          <input id="arrayInput" class="grow" value="5, 2, 9, 1, 5, 6, 12, 7" aria-label="Масив чисел" autocomplete="off">
+          <button id="randomBtn" type="button">🎲 Випадковий масив</button>
+        </div>
+        <div class="panels">
+          <div class="panel">
+            <h3>Сортування</h3>
+            <div class="row">
+              <select id="sortAlgo" aria-label="Алгоритм сортування">
+                <option value="quick">Quick Sort — O(n log n)</option>
+                <option value="bubble">Bubble Sort — O(n²)</option>
+              </select>
+              <button class="primary" data-action="sort">Сортувати</button>
+            </div>
+            <div class="result" id="sortResult"><span class="muted">Результат з’явиться тут.</span></div>
+          </div>
+          <div class="panel">
+            <h3>Пошук</h3>
+            <div class="row">
+              <input id="targetInput" class="small" placeholder="число" data-enter="search" aria-label="Шукане число" autocomplete="off">
+              <select id="searchAlgo" aria-label="Алгоритм пошуку">
+                <option value="linear">Лінійний — O(n)</option>
+                <option value="binary">Бінарний — O(log n)</option>
+              </select>
+              <button class="primary" data-action="search">Шукати</button>
+            </div>
+            <div class="result" id="searchResult"><span class="muted">Результат з’явиться тут.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="cardBench">
+        <h2>Live Benchmark: Bubble Sort проти Quick Sort</h2>
+        <p class="hint">Сервер сортує випадкові масиви обох алгоритмами й вимірює час. Для 10 000 елементів Bubble Sort може працювати кілька секунд.</p>
+        <div class="row checks">
+          <strong>Розміри масивів:</strong>
+          <label><input type="checkbox" name="size" value="100" checked> 100</label>
+          <label><input type="checkbox" name="size" value="1000" checked> 1 000</label>
+          <label><input type="checkbox" name="size" value="10000" checked> 10 000</label>
+          <button class="primary" data-action="benchmark" id="benchBtn">Запустити тест</button>
+          <span class="muted" id="benchStatus"></span>
+        </div>
+        <div class="bench" id="benchResult"></div>
+      </section>
+    </div>
+
+    <!-- ===== Сторінка 3: ML ===== -->
+    <div class="page" data-page="ml" hidden>
+      <section class="card" id="cardMl">
+        <h2>ML-аналітика</h2>
+        <p class="hint">Результати <code>python -m ml_pipeline.train</code>: KMeans-сегментація, <code>RandomForestClassifier</code> для <code>high_engagement</code>, регресія суми витрат (R², MAE) і жадібні рекомендації.</p>
+        <div class="muted" id="mlStatus">Завантаження…</div>
+        <div id="mlBody" hidden>
+          <div class="seg">
+            <button type="button" data-subtab="metrics" class="on">📊 Метрики</button>
+            <button type="button" data-subtab="pca">🌐 PCA-графік</button>
+            <button type="button" data-subtab="recs">🎯 Рекомендації</button>
+          </div>
+
+          <div class="sub" data-sub="metrics">
+            <div class="tiles" id="mlMetrics"></div>
+            <div class="muted" id="mlDetails"></div>
+          </div>
+
+          <div class="sub" data-sub="pca" hidden>
+            <h3>PCA-проєкція кластерів KMeans (Plotly)</h3>
+            <div class="row">
+              <button class="active" type="button" data-pca="2">2D</button>
+              <button type="button" data-pca="3">3D</button>
+              <span class="muted">Потрібен інтернет: бібліотека Plotly завантажується з CDN.</span>
+            </div>
+            <iframe id="pcaFrame" class="pca-frame" title="PCA-проєкція кластерів"></iframe>
+          </div>
+
+          <div class="sub" data-sub="recs" hidden>
+            <h3>Персональні рекомендації та ціновий фільтр</h3>
+            <p class="hint">Топ-5 продуктів кластера клієнта за співвідношенням покупок до переглядів. Ціновий фільтр залишає товари в діапазоні ±30% від типового чека клієнта; якщо таких менше п’яти, фільтр не застосовується.</p>
+            <div class="row">
+              <input id="mlUserId" class="small" type="number" min="1" placeholder="ID" data-enter="ml-recs" aria-label="ID клієнта">
+              <button class="primary" data-action="ml-recs">Показати</button>
+              <span class="muted">Приклади ID:</span><span id="mlSamples" class="chips"></span>
+            </div>
+            <div id="mlRecs"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== Сторінка 4: журнал ===== -->
+    <div class="page" data-page="logs" hidden>
+      <section class="card" id="cardLogs">
+        <h2><span>Журнал операцій (SQLite, <code>OperationLog</code>)</span> <span class="count" id="logCount">0</span></h2>
+        <p class="hint">Кожна операція над чергами й стеком записується в базу. Фільтри працюють миттєво, без перезавантаження сторінки. Час — UTC.</p>
+        <div class="row">
+          <select id="fStructure" aria-label="Структура">
+            <option value="">Усі структури</option>
+            {% for s in structures %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+          </select>
+          <select id="fOperation" aria-label="Тип операції">
+            <option value="">Усі операції</option>
+            {% for o in operations %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
+          </select>
+          <input id="fSearch" class="grow" placeholder="Пошук за значенням або описом" autocomplete="off">
+          <button id="clearFilters" type="button" class="danger">Скинути</button>
+<a class="btn csv" id="exportCsv" href="/api/logs/export?format=csv">⬇ CSV</a>
+<a class="btn json" id="exportJson" href="/api/logs/export?format=json">⬇ JSON</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Час</th><th>Користувач</th><th>Структура</th><th>Операція</th><th>Значення</th><th>Опис</th></tr>
+            </thead>
+            <tbody id="logBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+    </div>
+  </div>
+
+  <div id="toasts" role="status" aria-live="polite"></div>
+
+  <script>
+{% raw %}
+    'use strict';
+    const POLL_MS = 3000;
+    const CHIP_LIMIT = 60;
+    const state = { cache: {}, logRequest: 0, timer: null, polling: false };
+
+    const $ = (selector) => document.querySelector(selector);
+
+    // Безпечне створення DOM: текст завжди вставляється як текст
+    function h(tag, attrs, ...children) {
+      const node = document.createElement(tag);
+      for (const [key, value] of Object.entries(attrs || {})) {
+        if (key === 'class') node.className = value;
+        else if (key === 'text') node.textContent = value;
+        else node.setAttribute(key, value);
+      }
+      for (const child of children.flat()) if (child != null) node.append(child);
+      return node;
+    }
+
+    function toast(message, type = 'ok') {
+      const node = h('div', { class: 'toast ' + type, text: message });
+      $('#toasts').append(node);
+      setTimeout(() => node.remove(), 3800);
+    }
+
+    async function api(url, options = {}) {
+      const request = Object.assign({ headers: { 'Content-Type': 'application/json' } }, options);
+      if (request.body && typeof request.body !== 'string') request.body = JSON.stringify(request.body);
+      let response;
+      try {
+        response = await fetch(url, request);
+      } catch (error) {
+        throw new Error('Немає зв’язку із сервером');
+      }
+      let data = {};
+      try { data = await response.json(); } catch (error) { /* порожня відповідь */ }
+      if (!response.ok) throw new Error(data.error || 'Помилка сервера (' + response.status + ')');
+      return data;
+    }
+    const post = (url, body = {}) => api(url, { method: 'POST', body });
+
+    function refocus(input) {
+      const active = document.activeElement;
+      if (!active || active === document.body || active.tagName === 'BUTTON') input.focus();
+    }
+
+    function userId() {
+      const value = parseInt($('#userId').value, 10);
+      return Number.isInteger(value) && value > 0 ? value : 1;
+    }
+
+    // Рендер лише коли дані змінилися, щоб списки не мерехтіли
+    function changed(key, data) {
+      const snapshot = JSON.stringify(data);
+      if (state.cache[key] === snapshot) return false;
+      state.cache[key] = snapshot;
+      return true;
+    }
+
+    // ---------- Черга клієнтів і стек ----------
+    function renderList(key, listId, countId, items, emptyText, makeItem) {
+      if (!changed(key, items)) return;
+      const list = $(listId);
+      list.replaceChildren();
+      $(countId).textContent = items.length;
+      if (!items.length) {
+        list.append(h('li', { class: 'empty', text: emptyText }));
+        return;
+      }
+      items.forEach((item, index) => list.append(makeItem(item, index)));
+    }
+
+    // Єдиний список у порядку обслуговування: спочатку VIP (Priority Queue), потім звичайні (FIFO)
+    function renderClients(vipQueue, regularQueue) {
+      const items = [
+        ...vipQueue.map((c) => ({ name: String(c.customer), vip: c.priority === 1 })),
+        ...regularQueue.map((name) => ({ name: String(name), vip: false })),
+      ];
+      renderList('clients', '#queueList', '#queueCount', items, 'Черга порожня',
+        (item, i) => h('li', { class: 'item' },
+          h('span', { class: 'num', text: i + 1 }),
+          h('span', { class: 'label', text: item.name }),
+          h('span', { class: 'tag ' + (item.vip ? 'vip' : 'reg'), text: item.vip ? 'VIP' : 'звичайний' }),
+          i === 0 ? h('span', { class: 'tag next', text: 'наступний' }) : null));
+    }
+
+    const formatMoney = (value) => Math.abs(value).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function renderStack(payload) {
+      const items = payload.items;
+      $('#balanceValue').textContent = formatMoney(payload.balance) + ' грн';
+      renderList('stack', '#stackList', '#stackCount', items, 'Стек порожній',
+        (item, i) => h('li', { class: 'item' },
+          h('span', { class: 'num', text: items.length - i }),
+          h('span', { class: 'label', text: item.name }),
+          item.amount ? h('span', { class: 'amount ' + (item.amount > 0 ? 'plus' : 'minus'),
+                                    text: (item.amount > 0 ? '+' : '−') + formatMoney(item.amount) }) : null,
+          i === 0 ? h('span', { class: 'tag next', text: 'верх стеку' }) : null));
+    }
+
+    // ---------- Журнал ----------
+    function logQuery(extra) {
+      const params = new URLSearchParams();
+      const structure = $('#fStructure').value;
+      const operation = $('#fOperation').value;
+      const text = $('#fSearch').value.trim();
+      if (structure) params.set('structure', structure);
+      if (operation) params.set('operation_type', operation);
+      if (text) params.set('q', text);
+      for (const [key, value] of Object.entries(extra || {})) params.set(key, value);
+      return params.toString();
+    }
+
+    function updateExportLinks() {
+      $('#exportCsv').href = '/api/logs/export?' + logQuery({ format: 'csv' });
+      $('#exportJson').href = '/api/logs/export?' + logQuery({ format: 'json' });
+    }
+
+    function renderLogs(logs) {
+      $('#logCount').textContent = logs.length;
+      const body = $('#logBody');
+      body.replaceChildren();
+      if (!logs.length) {
+        body.append(h('tr', {}, h('td', { colspan: 7, class: 'empty', text: 'Записів немає' })));
+        return;
+      }
+      for (const log of logs) {
+        const isAdd = log.operation_type === 'enqueue' || log.operation_type === 'push';
+        body.append(h('tr', {},
+          h('td', { text: log.id }),
+          h('td', { class: 'nowrap', text: log.timestamp || '' }),
+          h('td', { text: log.user_id }),
+          h('td', { text: log.structure }),
+          h('td', {}, h('span', { class: 'op ' + (isAdd ? 'add' : 'remove'), text: log.operation_type })),
+          h('td', { text: log.value || '' }),
+          h('td', { text: log.description || '' })));
+      }
+    }
+
+    async function refreshLogs() {
+      const requestId = ++state.logRequest;
+      const data = await api('/api/logs?' + logQuery({ limit: 200 }));
+      if (requestId !== state.logRequest) return;
+      updateExportLinks();
+      if (changed('logs', data.logs)) renderLogs(data.logs);
+    }
+
+    async function refreshState() {
+      const [queue, priority, stack] = await Promise.all([
+        api('/api/queue'), api('/api/priority-queue'), api('/api/stack')]);
+      renderClients(priority.queue, queue.queue);
+      renderStack(stack);
+    }
+
+    function setStatus(ok) {
+      if (!$('#liveToggle').checked) {            // живе оновлення вимкнено → офлайн
+        $('#statusDot').className = 'dot bad';
+        $('#statusText').textContent = 'офлайн';
+        return;
+      }
+      $('#statusDot').className = 'dot ' + (ok ? 'ok' : 'bad');
+      $('#statusText').textContent = ok
+        ? 'оновлено ' + new Date().toLocaleTimeString('uk-UA')
+        : 'сервер недоступний';
+    }
+
+    async function refreshAll() {
+      if (state.polling) return;
+      state.polling = true;
+      try {
+        await Promise.all([refreshState(), refreshLogs()]);
+        setStatus(true);
+      } catch (error) {
+        setStatus(false);
+      } finally {
+        state.polling = false;
+      }
+    }
+
+    function applyPolling() {
+      clearInterval(state.timer);
+      if ($('#liveToggle').checked) {
+        state.timer = setInterval(() => { if (!document.hidden) refreshAll(); }, POLL_MS);
+        refreshAll();
+      } else {
+        setStatus(false);
+      }
+    }
+
+    // ---------- Дії над чергою клієнтів ----------
+    // Тип пріоритету: «звичайний» → FIFO-черга, «VIP» → Priority Queue
+    async function queueEnqueue() {
+      const input = $('#queueInput');
+      const customer = input.value;
+      if (!customer.trim()) throw new Error('Клієнт не вказаний');
+
+      const vip = $('#queueType').value === 'vip';
+      if (vip) await post('/api/priority-queue/enqueue', { customer, priority: 1, user_id: userId() });
+      else await post('/api/queue/enqueue', { customer, user_id: userId() });
+
+      input.value = ''; refocus(input);
+      await refreshState();
+      toast('Клієнта ' + customer.trim() + ' додано (' + (vip ? 'VIP' : 'звичайний') + ')');
+      refreshLogs();
+    }
+
+    // Спочатку обслуговуємо VIP, якщо їх немає — наступного зі звичайної черги
+    async function queueDequeue() {
+      let data;
+      try {
+        data = await post('/api/priority-queue/dequeue', { user_id: userId() });
+      } catch (error) {
+        if (!error.message.includes('порожня')) throw error;
+        data = await post('/api/queue/dequeue', { user_id: userId() });
+      }
+      await refreshState();
+      toast(data.message);
+      refreshLogs();
+    }
+
+    async function stackPush() {
+      const input = $('#stackInput');
+      const body = { transaction: input.value, user_id: userId() };
+      const rawAmount = $('#stackAmount').value.trim();
+      if (rawAmount !== '') {
+        const amount = Number(rawAmount.replace(',', '.'));
+        if (!Number.isFinite(amount) || amount < 0) throw new Error('Сума має бути невід’ємним числом');
+        body.amount = Number($('#stackType').value) * amount;
+      }
+      const data = await post('/api/stack/push', body);
+      input.value = ''; $('#stackAmount').value = ''; refocus(input);
+      renderStack(data); toast(data.message); refreshLogs();
+    }
+
+    async function stackPop() {
+      const data = await post('/api/stack/pop', { user_id: userId() });
+      renderStack(data); toast(data.message); refreshLogs();
+    }
+
+    // ---------- Алгоритми ----------
+    function parseArray(text) {
+      const parts = text.split(/[,;\s]+/).filter(Boolean);
+      const numbers = parts.map(Number);
+      if (numbers.some((n) => !Number.isFinite(n))) throw new Error('Масив має містити лише числа');
+      return numbers;
+    }
+
+    function chips(values, highlight = -1) {
+      if (!values.length) return h('div', { class: 'muted', text: 'порожній масив' });
+      const wrap = h('div', { class: 'chips' });
+      values.slice(0, CHIP_LIMIT).forEach((value, index) =>
+        wrap.append(h('span', { class: 'chip' + (index === highlight ? ' hit' : ''), text: String(value) })));
+      if (values.length > CHIP_LIMIT) {
+        wrap.append(h('span', { class: 'chip more', text: '… ще ' + (values.length - CHIP_LIMIT) }));
+      }
+      return wrap;
+    }
+
+    function timesWord(n) {
+      const last = n % 10, tens = n % 100;
+      if (last === 1 && tens !== 11) return 'раз';
+      if (last >= 2 && last <= 4 && (tens < 12 || tens > 14)) return 'рази';
+      return 'разів';
+    }
+
+    const formatTime = (seconds) => seconds === 0 ? '< 0,00001 с' : seconds.toFixed(5).replace('.', ',') + ' с';
+
+    async function doSort() {
+      const array = parseArray($('#arrayInput').value);
+      const algorithm = $('#sortAlgo').value;
+      const data = await post('/api/algorithms/sort', { array, algorithm });
+      const title = algorithm === 'bubble' ? 'Bubble Sort, O(n²)' : 'Quick Sort, O(n log n)';
+      $('#sortResult').replaceChildren(
+        h('div', { class: 'row-label', text: 'Вхідний масив' }), chips(data.original),
+        h('div', { class: 'row-label', text: 'Відсортований' }), chips(data.sorted),
+        h('div', { class: 'meta', text: title + ' · ' + data.sorted.length + ' ел. · час ' + formatTime(data.time_sec) }));
+    }
+
+    async function doSearch() {
+      const array = parseArray($('#arrayInput').value);
+      const raw = $('#targetInput').value.trim();
+      const target = Number(raw);
+      if (raw === '' || !Number.isFinite(target)) throw new Error('Вкажіть число для пошуку');
+      const algorithm = $('#searchAlgo').value;
+      const data = await post('/api/algorithms/search', { array, target, algorithm });
+
+      const binary = algorithm === 'binary';
+      const shown = binary ? data.sorted_array : data.array;
+      const found = data.index >= 0;
+      const verdict = found
+        ? h('div', { class: 'found', text: 'Знайдено на позиції ' + data.index + ' (нумерація з 0)' })
+        : h('div', { class: 'missing', text: 'Елемент ' + target + ' не знайдено (індекс −1)' });
+      const note = binary
+        ? 'Бінарний пошук, O(log n): працює лише по впорядкованому масиву, тому масив спершу відсортовано.'
+        : 'Лінійний пошук, O(n): перевіряє елементи по черзі.';
+      $('#searchResult').replaceChildren(
+        verdict,
+        h('div', { class: 'row-label', text: binary ? 'Впорядкований масив' : 'Масив' }),
+        chips(shown, data.index),
+        h('div', { class: 'meta', text: note }));
+    }
+
+    function randomArray() {
+      const values = Array.from({ length: 12 }, () => Math.floor(Math.random() * 99) + 1);
+      $('#arrayInput').value = values.join(', ');
+    }
+
+    // ---------- Benchmark ----------
+    function benchCol(label, seconds, skipped, kind, maxSeconds) {
+      const pct = skipped || !maxSeconds ? 0 : Math.max(3, (seconds / maxSeconds) * 100);
+      return h('div', { class: 'bcol' },
+        h('div', { class: 'btime', text: skipped ? 'пропущено' : formatTime(seconds) }),
+        h('div', { class: 'btrack' }, h('div', { class: 'bfill ' + kind, style: 'height:' + pct + '%' })),
+        h('div', { class: 'blabel', text: label }));
+    }
+
+    function renderBenchmark(results) {
+      const cards = results.map((r, i) => {
+        const bubble = r.bubble_skipped ? 0 : r.bubble_sort_sec;
+        const maxSeconds = Math.max(bubble, r.quick_sort_sec);
+        const faster = !r.bubble_skipped && r.quick_sort_sec > 0 ? r.bubble_sort_sec / r.quick_sort_sec : 0;
+        const fast = faster >= 1.5 ? Math.round(faster) : 0;
+        return h('div', { class: 'bcard', style: 'animation-delay:' + (i * 100) + 'ms' },
+          h('div', { class: 'bhead' },
+            h('b', { text: r.size.toLocaleString('uk-UA') + ' елементів' }),
+            fast ? h('span', { class: 'bbadge', text: '×' + fast }) : null),
+          h('div', { class: 'bchart' },
+            benchCol('Bubble Sort', r.bubble_sort_sec, r.bubble_skipped, 'bubble', maxSeconds),
+            benchCol('Quick Sort', r.quick_sort_sec, false, 'quick', maxSeconds)),
+          fast ? h('div', { class: 'speedup', text: 'Quick Sort швидший приблизно в ' + fast + ' ' + timesWord(fast) }) : null);
+      });
+      $('#benchResult').replaceChildren(...cards);
+    }
+
+    async function doBenchmark() {
+      const sizes = [...document.querySelectorAll('input[name="size"]:checked')].map((box) => Number(box.value));
+      if (!sizes.length) throw new Error('Оберіть хоча б один розмір масиву');
+      $('#benchStatus').textContent = 'Виконується…';
+      try {
+        const data = await post('/api/algorithms/benchmark', { sizes });
+        renderBenchmark(data.benchmark_results);
+      } finally {
+        $('#benchStatus').textContent = '';
+      }
+    }
+
+    // ---------- ML-аналітика ----------
+    function renderMlSummary(data) {
+      const metric = (value) => Number(value).toFixed(3);
+      const tiles = [
+        ['Кластерів (k, лікоть)', data.best_k], ['Користувачів', data.n_users],
+        ['Accuracy', metric(data.classifier.accuracy)], ['Precision', metric(data.classifier.precision)],
+        ['Recall', metric(data.classifier.recall)], ['F1', metric(data.classifier.f1)],
+        ['R² (регресія)', metric(data.regression.R2)], ['MAE (регресія)', Number(data.regression.MAE).toFixed(2)],
+      ];
+      $('#mlMetrics').replaceChildren(...tiles.map(([label, value], i) =>
+        h('div', { class: 'tile', style: 'animation-delay:' + (i * 60) + 'ms' },
+          h('b', { text: String(value) }), h('span', { text: label }))));
+      const sizes = Object.entries(data.cluster_sizes).map(([k, n]) => 'кластер ' + k + ': ' + n).join(' · ');
+      $('#mlDetails').textContent = 'Розміри кластерів — ' + sizes
+        + '. Параметри GridSearchCV: ' + JSON.stringify(data.classifier.best_params) + '.';
+      $('#mlSamples').replaceChildren(...data.sample_user_ids.map((id) =>
+        h('button', { type: 'button', class: 'link', 'data-user': id, text: String(id) })));
+    }
+
+    function loadPca(dims) {
+      $('#pcaFrame').src = '/ml/pca?dims=' + dims;
+      document.querySelectorAll('[data-pca]').forEach((button) =>
+        button.classList.toggle('active', button.dataset.pca === String(dims)));
+    }
+
+    function productTable(items) {
+      if (!items.length) return h('div', { class: 'muted', text: 'Немає товарів' });
+      return h('div', { class: 'table-wrap' }, h('table', {},
+        h('thead', {}, h('tr', {}, ...['Товар', 'Ціна', 'Покупки / перегляди', 'Конверсія'].map((t) => h('th', { text: t })))),
+        h('tbody', {}, ...items.map((p) => h('tr', {},
+          h('td', { text: '#' + p.product_id }), h('td', { text: p.price.toFixed(2) }),
+          h('td', { text: p.purchases + ' / ' + p.views }), h('td', { text: p.conversion.toFixed(3) }))))));
+    }
+
+    async function mlRecommend() {
+      const id = parseInt($('#mlUserId').value, 10);
+      if (!Number.isInteger(id) || id < 1) throw new Error('Вкажіть ID клієнта (ціле число)');
+      const data = await api('/api/ml/recommendations/' + id);
+      const range = data.price_range
+        ? 'діапазон ціни ' + data.price_range[0] + '–' + data.price_range[1]
+        : 'покупок немає, тож ціновий фільтр не застосовується';
+      $('#mlRecs').replaceChildren(
+        h('div', { class: 'meta', text: 'Клієнт ' + data.user_id + ' · кластер ' + data.cluster
+          + ' · типовий чек ' + data.avg_check + ' · ' + range }),
+        h('div', { class: 'recs' },
+          h('div', {}, h('h4', { text: 'З ціновим фільтром' }), productTable(data.price_aware)),
+          h('div', {}, h('h4', { text: 'Без фільтра (лише покупки / перегляди)' }), productTable(data.plain))));
+    }
+
+    async function loadMl() {
+      try {
+        renderMlSummary(await api('/api/ml/summary'));
+        $('#mlStatus').hidden = true;
+        $('#mlBody').hidden = false;
+        loadPca(2);
+      } catch (error) {
+        $('#mlStatus').textContent = error.message;
+      }
+    }
+
+    // ---------- Події ----------
+    const actions = {
+      'queue-enqueue': queueEnqueue, 'queue-dequeue': queueDequeue,
+      'stack-push': stackPush, 'stack-pop': stackPop,
+      'sort': doSort, 'search': doSearch, 'benchmark': doBenchmark, 'ml-recs': mlRecommend,
+    };
+
+    async function run(button) {
+      const action = actions[button.dataset.action];
+      if (!action) return;
+      button.disabled = true;
+      try { await action(); }
+      catch (error) { toast(error.message, 'error'); }
+      finally { button.disabled = false; }
+    }
+
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-action]');
+      if (button) run(button);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || !event.target.dataset || !event.target.dataset.enter) return;
+      const button = document.querySelector('[data-action="' + event.target.dataset.enter + '"]');
+      if (button && !button.disabled) run(button);
+    });
+
+    let filterTimer;
+    const scheduleLogs = () => { clearTimeout(filterTimer); filterTimer = setTimeout(() => refreshLogs().catch(() => {}), 250); };
+    $('#fSearch').addEventListener('input', scheduleLogs);
+    $('#fStructure').addEventListener('change', scheduleLogs);
+    $('#fOperation').addEventListener('change', scheduleLogs);
+    $('#clearFilters').addEventListener('click', () => {
+      $('#fStructure').value = ''; $('#fOperation').value = ''; $('#fSearch').value = '';
+      scheduleLogs();
+    });
+    $('#randomBtn').addEventListener('click', randomArray);
+    $('#liveToggle').addEventListener('change', applyPolling);
+    document.addEventListener('click', (event) => {
+      const pca = event.target.closest('[data-pca]');
+      if (pca) loadPca(Number(pca.dataset.pca));
+      const sample = event.target.closest('[data-user]');
+      if (sample) {
+        $('#mlUserId').value = sample.dataset.user;
+        run(document.querySelector('[data-action="ml-recs"]'));
+      }
+    });
+
+    updateExportLinks();
+    refreshAll();
+    applyPolling();
+    loadMl();
+{% endraw %}
+  </script>
+  <script src="{{ url_for('static', filename='js/tabs.js') }}"></script>
+</body>
+</html>
